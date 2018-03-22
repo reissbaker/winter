@@ -1,0 +1,9 @@
+[package]
+name = "winter"
+version = "0.1.0"
+authors = ["Matt Baker <matthew.reiss.baker@gmail.com>"]
+
+[dependencies]
+termion = "^1.5"
+pty = "^0.2"
+libc = "^0.2"
