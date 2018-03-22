@@ -4,10 +4,11 @@ extern crate termion;
 
 use std::thread;
 use std::env;
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Write, Stdout};
 use std::ffi::CString;
 use std::ptr;
 use pty::fork::{Fork, Master};
+use termion::raw::{IntoRawMode, RawTerminal};
 
 const CHUNK_SIZE: usize = 1024;
 
@@ -17,12 +18,14 @@ fn main() {
     match fork.is_parent() {
         // We are the master
         Ok(mut master) => {
+            let mut stdout = io::stdout().into_raw_mode().unwrap();
+
             let mut master_clone = master.clone();
             thread::spawn(move|| {
                 write_master_forever(&mut master_clone);
             });
 
-            match read_master_forever(&mut master) {
+            match read_master_forever(&mut master, &mut stdout) {
                 Ok(_) => (),
                 Err(e) => {
                     println!("Error: {:?}", e);
@@ -67,7 +70,7 @@ fn main() {
     }
 }
 
-fn read_master_forever(master: &mut Master) -> Result<(), io::Error> {
+fn read_master_forever(master: &mut Master, stdout: &mut RawTerminal<Stdout>) -> Result<(), io::Error> {
     let mut bytes: [u8; CHUNK_SIZE] = [0; CHUNK_SIZE];
 
     loop {
@@ -88,8 +91,8 @@ fn read_master_forever(master: &mut Master) -> Result<(), io::Error> {
                     .map(|byte_addr| *byte_addr)
                     .collect();
 
-                try!(io::stdout().write_all(&read_bytes));
-                try!(io::stdout().flush());
+                try!(stdout.write_all(&read_bytes));
+                try!(stdout.flush());
             },
         }
     }
