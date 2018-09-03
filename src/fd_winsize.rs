@@ -1,9 +1,9 @@
-use atty;
+use std::os::unix::io::RawFd;
 use libc::{
+  self,
   ioctl,
   TIOCGWINSZ,
   TIOCSWINSZ,
-  STDOUT_FILENO,
   c_ushort,
 };
 
@@ -25,9 +25,9 @@ struct UnixSize {
   y: c_ushort,
 }
 
-// Get window size of stdout's current PTY
-pub fn get_size() -> Option<WindowSize> {
-  if atty::isnt(atty::Stream::Stdout) {
+// Get window size of PTY the given fd is connected to
+pub fn get(fd: RawFd) -> Option<WindowSize> {
+  if unsafe { libc::isatty(fd) } == 0 {
     return None;
   }
 
@@ -38,9 +38,7 @@ pub fn get_size() -> Option<WindowSize> {
     y: 0,
   };
 
-  let retval = unsafe { ioctl(STDOUT_FILENO, TIOCGWINSZ, &us) };
-
-  if retval == 0 {
+  if unsafe { ioctl(fd, TIOCGWINSZ, &us) } == 0 {
     return Some(WindowSize {
       rows: us.rows,
       cols: us.cols,
@@ -50,8 +48,8 @@ pub fn get_size() -> Option<WindowSize> {
   None
 }
 
-// Set window size of stdout's current PTY
-pub fn set_size(rows: u16, cols: u16) -> Result<(), i32> {
+// Set window size of PTY the given fd is connected to
+pub fn set(fd: RawFd, rows: u16, cols: u16) -> Result<(), i32> {
   let us = UnixSize {
     rows: rows,
     cols: cols,
@@ -59,7 +57,7 @@ pub fn set_size(rows: u16, cols: u16) -> Result<(), i32> {
     y: 0,
   };
 
-  let retval = unsafe { ioctl(STDOUT_FILENO, TIOCSWINSZ, &us) };
+  let retval = unsafe { ioctl(fd, TIOCSWINSZ, &us) };
   if retval == 0 {
     return Ok(());
   }

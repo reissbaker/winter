@@ -1,51 +1,51 @@
 use std::{
     thread,
     io::{self, Read, Write, Stdout},
+    os::unix::io::AsRawFd,
 };
 
 use pty::fork::{Fork, Master};
 use termion::raw::{IntoRawMode, RawTerminal};
 
 use shell;
-use pty_win;
+use fd_winsize;
 
 const CHUNK_SIZE: usize = 1024;
 
 pub fn fork() {
-    let size = pty_win::get_size();
     let fork = Fork::from_ptmx().unwrap();
 
     match fork.is_parent() {
         // We are the master
         Ok(mut master) => {
-            let mut stdout = io::stdout().into_raw_mode().unwrap();
+          let stdout = io::stdout();
 
-            let mut master_clone = master.clone();
-            thread::spawn(move|| {
-                write_master_forever(&mut master_clone);
-            });
-
-
-            match read_master_forever(&mut master, &mut stdout) {
-                Ok(_) => (),
-                Err(e) => {
-                    println!("Error: {:?}", e);
-                },
-            }
-        },
-
-        // We are the slave; exec a shell
-        Err(_) => {
-          match size {
-            // If we previously read a window size, re-set it here.
+          match fd_winsize::get(stdout.as_raw_fd()) {
+            // If we successfully read a window size, set it on the PTY
             Some(size) => {
-              pty_win::set_size(size.rows, size.cols);
+              fd_winsize::set(master.as_raw_fd(), size.rows, size.cols);
             },
 
             // If not, whatever; the caller obv didn't care about the size
             None => (),
           }
 
+          let mut master_clone = master.clone();
+          thread::spawn(move|| {
+              write_master_forever(&mut master_clone);
+          });
+
+          let mut stdout_raw = stdout.into_raw_mode().unwrap();
+          match read_master_forever(&mut master, &mut stdout_raw) {
+              Ok(_) => (),
+              Err(e) => {
+                  println!("Error: {:?}", e);
+              },
+          }
+        },
+
+        // We are the slave; exec a shell
+        Err(_) => {
           shell::exec()
         }
     }

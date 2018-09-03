@@ -6,7 +6,7 @@ extern crate daemonize;
 
 mod shell;
 mod term;
-mod pty_win;
+mod fd_winsize;
 
 fn main() {
     term::fork();
