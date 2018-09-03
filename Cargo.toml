@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Matt Baker <matthew.reiss.baker@gmail.com>"]
 
 [dependencies]
+atty = "^0.2"
 termion = "^1.5"
 pty = "^0.2"
 libc = "^0.2"

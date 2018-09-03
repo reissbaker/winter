@@ -7,10 +7,12 @@ use pty::fork::{Fork, Master};
 use termion::raw::{IntoRawMode, RawTerminal};
 
 use shell;
+use pty_win;
 
 const CHUNK_SIZE: usize = 1024;
 
 pub fn fork() {
+    let size = pty_win::get_size();
     let fork = Fork::from_ptmx().unwrap();
 
     match fork.is_parent() {
@@ -23,6 +25,7 @@ pub fn fork() {
                 write_master_forever(&mut master_clone);
             });
 
+
             match read_master_forever(&mut master, &mut stdout) {
                 Ok(_) => (),
                 Err(e) => {
@@ -32,7 +35,19 @@ pub fn fork() {
         },
 
         // We are the slave; exec a shell
-        Err(_) => shell::exec(),
+        Err(_) => {
+          match size {
+            // If we previously read a window size, re-set it here.
+            Some(size) => {
+              pty_win::set_size(size.rows, size.cols);
+            },
+
+            // If not, whatever; the caller obv didn't care about the size
+            None => (),
+          }
+
+          shell::exec()
+        }
     }
 }
 
