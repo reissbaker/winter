@@ -2,10 +2,6 @@ use std::{
     thread,
     io::{self, Read, Write, Stdout},
     os::unix::io::{RawFd, AsRawFd},
-    sync::{
-      Arc,
-      atomic::{AtomicBool, Ordering},
-    },
 };
 
 use pty::fork::{Fork, Master};
