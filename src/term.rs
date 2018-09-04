@@ -12,7 +12,8 @@ use libc;
 use shell;
 use fd_winsize;
 
-const CHUNK_SIZE: usize = 1024;
+// Read in page-sized chunks
+const CHUNK_SIZE: usize = 1024 * 4;
 
 pub fn fork() {
     let fork = Fork::from_ptmx().unwrap();
@@ -75,7 +76,6 @@ fn read_master_forever(master: &mut Master, stdout: &mut RawTerminal<Stdout>) ->
 
     Ok(())
 }
-
 
 /*
 Signal handling function. Loops forever handling signals. Why do it this way?
