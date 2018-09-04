@@ -11,9 +11,7 @@ use libc;
 
 use shell;
 use fd_winsize;
-
-// Read in page-sized chunks
-const CHUNK_SIZE: usize = 1024 * 4;
+use page_size;
 
 pub fn fork() {
     let fork = Fork::from_ptmx().unwrap();
@@ -48,7 +46,8 @@ pub fn fork() {
 }
 
 fn read_master_forever(master: &mut Master, stdout: &mut RawTerminal<Stdout>) -> Result<(), io::Error> {
-    let mut bytes: [u8; CHUNK_SIZE] = [0; CHUNK_SIZE];
+    let mut bytes_vec = vec![0; page_size::get()];
+    let mut bytes = bytes_vec.as_mut_slice();
 
     loop {
         // Get bytes from master, print to screen
@@ -115,7 +114,8 @@ fn handle_signals_forever(master: &mut Master) -> Result<(), io::Error> {
 }
 
 fn write_master_forever(master: &mut Master) -> Result<(), io::Error> {
-    let mut bytes: [u8; CHUNK_SIZE] = [0; CHUNK_SIZE];
+    let mut bytes_vec = vec![0; page_size::get()];
+    let mut bytes = bytes_vec.as_mut_slice();
 
     loop {
         // Get bytes from stdin, send to master
